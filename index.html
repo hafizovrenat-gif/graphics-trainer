@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Інтерактивний тренажер: Комп'ютерна графіка</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+    }
+    
+    .font-brand {
+      font-family: 'Comfortaa', cursive;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Drag and drop styling */
+    .draggable-item {
+      cursor: grab;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .draggable-item:active {
+      cursor: grabbing;
+      transform: scale(1.03);
+    }
+    .drop-zone {
+      transition: all 0.25s ease;
+    }
+    .drop-zone.drag-over {
+      background-color: rgba(99, 102, 241, 0.25);
+      border-color: #6366f1;
+      transform: scale(1.01);
+    }
+
+    /* Animations */
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(129, 140, 248, 0.3); }
+      50% { box-shadow: 0 0 25px rgba(129, 140, 248, 0.7); }
+    }
+    .active-glow {
+      animation: pulseGlow 2.5s infinite;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.5);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.8);
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen justify-between p-3 sm:p-6 text-slate-100">
+
+  <!-- TOP BAR / HEADER -->
+  <header class="max-w-5xl mx-auto w-full mb-4">
+    <div class="glass-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-tr from-indigo-500 to-purple-500 p-3 rounded-xl shadow-lg">
+          <i class="fa-solid fa-palette text-2xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold font-brand text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300">
+            Графічний Майстер
+          </h1>
+          <p class="text-xs text-slate-400">Тренажер з інформатики • 9 клас</p>
+        </div>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="flex items-center gap-3 sm:gap-6 ml-auto">
+        <div class="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
+          <i class="fa-solid fa-trophy text-amber-400 text-sm"></i>
+          <span class="text-xs text-slate-400">Бали:</span>
+          <span id="score-display" class="font-bold text-amber-300 text-base">0</span>
+        </div>
+        <div class="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
+          <i class="fa-solid fa-layer-group text-indigo-400 text-sm"></i>
+          <span class="text-xs text-slate-400">Прогрес:</span>
+          <span id="progress-text" class="font-bold text-indigo-300 text-base">0/24</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overall Progress Bar -->
+    <div class="w-full bg-slate-900/60 rounded-full h-2.5 mt-3 p-0.5 border border-slate-800">
+      <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-1.5 rounded-full transition-all duration-500 w-0"></div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-5xl mx-auto w-full flex-grow flex flex-col justify-center my-2">
+
+    <!-- SCREEN 1: INTRO / START SCREEN -->
+    <div id="start-screen" class="glass-card rounded-3xl p-6 sm:p-10 text-center shadow-2xl relative overflow-hidden">
+      <div class="absolute -top-24 -right-24 w-60 h-60 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-60 h-60 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="inline-block p-4 bg-indigo-500/10 rounded-full border border-indigo-500/20 mb-4">
+        <i class="fa-solid fa-shapes text-5xl text-indigo-400"></i>
+      </div>
+      
+      <h2 class="text-2xl sm:text-4xl font-bold font-brand mb-4 text-white">
+        Перевір свої знання з теми «Комп'ютерна графіка»
+      </h2>
+      <p class="text-slate-300 max-w-2xl mx-auto mb-8 text-sm sm:text-base leading-relaxed">
+        Тебе чекають <strong class="text-indigo-300">24 інтерактивних завдання</strong> 3 рівнів складності. Навчися розрізняти 
+        <span class="text-cyan-300 font-semibold">растрову</span>, 
+        <span class="text-purple-300 font-semibold">векторну</span>, 
+        <span class="text-emerald-300 font-semibold">фрактальну</span> та 
+        <span class="text-amber-300 font-semibold">3D-графіку</span>, їх особливості, формати та сфери застосування!
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-8 text-left">
+        <div class="bg-slate-800/60 p-4 rounded-xl border border-cyan-500/30">
+          <div class="flex items-center gap-2 text-cyan-400 font-bold mb-1">
+            <i class="fa-solid fa-seedling"></i> Рівень 1: Базовий
+          </div>
+          <p class="text-xs text-slate-400">8 завдань. Вибір правильних відповідей та визначення графічних типів.</p>
+        </div>
+        <div class="bg-slate-800/60 p-4 rounded-xl border border-purple-500/30">
+          <div class="flex items-center gap-2 text-purple-400 font-bold mb-1">
+            <i class="fa-solid fa-bolt"></i> Рівень 2: Практичний
+          </div>
+          <p class="text-xs text-slate-400">8 завдань. Перетягування властивостей, переваг і недоліків у кошики.</p>
+        </div>
+        <div class="bg-slate-800/60 p-4 rounded-xl border border-amber-500/30">
+          <div class="flex items-center gap-2 text-amber-400 font-bold mb-1">
+            <i class="fa-solid fa-crown"></i> Рівень 3: Експерт
+          </div>
+          <p class="text-xs text-slate-400">8 завдань. Складання характеристик та логічних ланцюжків з блоків.</p>
+        </div>
+      </div>
+
+      <button id="start-btn" onclick="startTrainer()" class="px-8 py-4 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-indigo-500/30 transform hover:-translate-y-1 transition duration-200 active-glow">
+        <i class="fa-solid fa-play mr-2"></i> Розпочати Тренування
+      </button>
+    </div>
+
+    <!-- SCREEN 2: GAMEPLAY CONTAINER (HIDDEN INITIALLY) -->
+    <div id="game-screen" class="hidden flex-col gap-4">
+      
+      <!-- Task Header Card -->
+      <div class="glass-card rounded-2xl p-4 sm:p-5 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+          <span id="level-badge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            Рівень 1
+          </span>
+          <h3 id="task-number" class="text-sm font-semibold text-slate-300">
+            Завдання 1 з 24
+          </h3>
+        </div>
+        <div id="topic-tag" class="text-xs px-3 py-1 bg-slate-800 text-slate-400 rounded-lg border border-slate-700">
+          Тема: Властивості графіки
+        </div>
+      </div>
+
+      <!-- Task Main Workspace -->
+      <div class="glass-card rounded-3xl p-5 sm:p-8 shadow-2xl relative min-h-[380px] flex flex-col justify-between">
+        
+        <!-- Question Title -->
+        <div>
+          <h2 id="question-text" class="text-lg sm:text-xl font-semibold mb-2 text-white leading-relaxed">
+            Завантаження питання...
+          </h2>
+          <p id="question-hint-subtitle" class="text-xs sm:text-sm text-slate-400 mb-6">
+            Оберіть один правильний варіант відповіді.
+          </p>
+        </div>
+
+        <!-- Dynamic Content Area (Changes based on level: Choice vs Drag & Drop vs Puzzle) -->
+        <div id="interactive-area" class="my-4 flex-grow flex flex-col justify-center">
+          <!-- Injected via JavaScript -->
+        </div>
+
+        <!-- Feedback Box (Success / Hint) -->
+        <div id="feedback-box" class="hidden mt-4 p-4 rounded-2xl border transition-all duration-300">
+          <div class="flex items-start gap-3">
+            <div id="feedback-icon" class="text-xl mt-0.5"></div>
+            <div class="flex-grow">
+              <h4 id="feedback-title" class="font-bold text-sm mb-1"></h4>
+              <p id="feedback-message" class="text-xs sm:text-sm leading-relaxed"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="mt-6 flex justify-between items-center pt-4 border-t border-slate-700/50">
+          <button id="hint-btn" onclick="showHintManual()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium rounded-xl border border-slate-700 transition flex items-center gap-2">
+            <i class="fa-regular fa-lightbulb text-amber-400"></i> Підказка
+          </button>
+
+          <button id="action-btn" onclick="checkCurrentAnswer()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+            <span>Перевірити</span> <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SCREEN 3: RESULTS / SUMMARY SCREEN (HIDDEN INITIALLY) -->
+    <div id="summary-screen" class="hidden glass-card rounded-3xl p-6 sm:p-10 shadow-2xl">
+      <div class="text-center mb-8">
+        <div class="inline-block p-4 bg-amber-500/10 rounded-full border border-amber-500/30 mb-3">
+          <i class="fa-solid fa-award text-5xl text-amber-400"></i>
+        </div>
+        <h2 class="text-3xl font-bold font-brand text-white mb-2">Підсумок Тренування</h2>
+        <p class="text-slate-400 text-sm">Вітаємо із завершенням усіх 24 завдань!</p>
+      </div>
+
+      <!-- Main Score Card -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 text-center">
+          <div class="text-xs text-slate-400 mb-1">Загальний рахунок</div>
+          <div id="final-score" class="text-3xl font-bold text-amber-400">0 б.</div>
+          <div id="final-max-score" class="text-xs text-slate-500 mt-1">з 240 можливих</div>
+        </div>
+        <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 text-center">
+          <div class="text-xs text-slate-400 mb-1">Точність відповідей</div>
+          <div id="final-accuracy" class="text-3xl font-bold text-emerald-400">0%</div>
+          <div id="final-stats-text" class="text-xs text-slate-500 mt-1">0 виправлень</div>
+        </div>
+        <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700 text-center">
+          <div class="text-xs text-slate-400 mb-1">Звання</div>
+          <div id="final-rank" class="text-xl font-bold text-purple-300 mt-1">Знавець графіки</div>
+          <div class="text-xs text-slate-500 mt-1">Інформатика 9 клас</div>
+        </div>
+      </div>
+
+      <!-- Breakdown by Graphic Types -->
+      <h3 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-chart-pie text-indigo-400"></i> Успішність за видами графіки:
+      </h3>
+      <div id="category-stats" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        <!-- Dynamic Category Cards -->
+      </div>
+
+      <!-- Personal Recommendation -->
+      <div class="bg-indigo-950/40 p-5 rounded-2xl border border-indigo-500/30 mb-8">
+        <h4 class="font-bold text-indigo-300 text-sm mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-graduation-cap text-amber-400"></i> Методичні поради для повторення:
+        </h4>
+        <ul id="recommendations-list" class="space-y-2 text-xs sm:text-sm text-slate-300">
+          <!-- Recommendations via JS -->
+        </ul>
+      </div>
+
+      <div class="text-center">
+        <button onclick="restartTrainer()" class="px-8 py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5">
+          <i class="fa-solid fa-rotate-right mr-2"></i> Пройти тренажер знову
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="max-w-5xl mx-auto w-full text-center text-xs text-slate-500 py-3 mt-4 border-t border-slate-800">
+    <p>Інтерактивний методичний тренажер з інформатики для 9 класу • 2026</p>
+  </footer>
+
+  <script>
+    /* ==========================================================================
+       DATABASES: 24 TASKS ACROSS 3 LEVELS
+       ========================================================================== */
+    const TASKS = [
+      // ----------------- LEVEL 1: EASY (MULTIPLE CHOICE) -----------------
+      {
+        id: 1,
+        level: 1,
+        levelTitle: "Рівень 1: Базовий",
+        type: "choice",
+        category: "Raster",
+        question: "Який базовий елемент використовується для побудови растрового зображення?",
+        hintSub: "Оберіть один найменший елемент растрової сітки.",
+        options: [
+          "Векторний сегмент",
+          "Піксель (кольорова крапка)",
+          "Математична фрактальна формула",
+          "Тривимірний полігон"
+        ],
+        correct: 1,
+        explanation: "Растрове зображення складається з сітки пікселів — точок, кожна з яких має свій колір.",
+        hint: "Згадайте, з чого складається екран вашого смартфона або цифрове фото."
+      },
+      {
+        id: 2,
+        level: 1,
+        levelTitle: "Рівень 1: Базовий",
+        type: "choice",
+        category: "Vector",
+        question: "Що відбувається з векторним зображенням при його масштабуванні (збільшенні)?",
+        hintSub: "Подумайте про особливість математичного перерахунку ліній.",
+        options: [
+          "Зображення стає «сходинками» та втрачає чіткість",
+          "Зберігає абсолютну чіткість без втрати якості",
+          "Змінює свій колір на чорно-білий",
+          "Автоматично перетворюється на 3D-модель"
+        ],
+        correct: 1,
+        explanation: "Векторна графіка будується за формулами, тому при збільшенні обчислюються нові координати без втрати чіткості.",
+        hint: "Векторні малюнки не мають піксельної сітки, тому розмиття відсутнє."
+      },
+      {
+        id: 3,
+        level: 1,
+        levelTitle: "Рівень 1: Базовий",
+        type: "choice",
+        category: "Fractal",
+        question: "Яка головна властивість описує фрактальну графіку?",
+        hintSub: "Визначте характерну рису фракталів.",
+        options: [
+          "Складається з сітки точок (пікселів)",
+          "Властивість самоподібності (частина подібна до всього малюнка)",
+          "Для створення потрібні лише 3D-сканери",
+          "Використовує тільки 16 кольорів"
+        ],
+        correct: 1,
+        explanation: "Фрактал володіє самоподібністю: малий фрагмент зображення повторює форму всієї фігури.",
+        hint: "Подумайте про сніжинку Коха або гілочку папороті."
+      },
+      {
+        id: 4,
+        level: 1,
+        levelTitle: "Рівень 1: Базовий",
+        type: "choice",
+        category: "3D",
+        question: "Який етап створення 3D-графіки відповідає за розрахунок освітлення, тіней та текстур для отримання підсумкового плоского кадру?",
+        hintSub: "Оберіть фінальний процес візуалізації.",
+        options: [
+          "Текстурування",
+          "Моделювання",
+          "Рендеринг (Render)",
+          "Анімація каркаса"
+        ],
+        correct: 2,
+        explanation: "Рендеринг — це процес просвоєння матеріалів, світла та створення підсумкового 2D-зображення з 3D-сцени.",
+        hint: "Шукайте термін, який позначає процес «отримання підсумкового малюнка/кадру»."
+      },
+      {
+        id: 5,
+        level: 1,
+        levelTitle: "Рівень 1: Базовий",
+        type: "choice",
+        category: "Vector",
+        question: "Який із наведених форматів файлів є стандартним вектором для веб-графіки та логотипів?",
+        hintSub: "Згадайте векторні розширення.",
+        options: [
+          ".JPEG",
+          ".SVG",
+          ".BMP",
+          ".PNG"
+        ],
+        correct: 1,
+        explanation: "SVG (Scalable Vector Graphics) — популярний векторний формат для веб-сайтів.",
+        hint: "Розшифровується як Scalable Vector Graphics."
+      },
+      {
+        id: 6,
+        level: 1,
+        levelTitle: "Рівень 1: Базовий",
+        type: "choice",
+        category: "Raster",
+        question: "Де НАЙБІЛЬШ доцільно використовувати растрову графіку?",
+        hintSub: "Подумайте про реальні кольорові зображення.",
+        options: [
+          "Для розробки креслень будівель",
+          "Для створення логотипів компаній",
+          "Для збереження цифрових фотографій та репродукцій картин",
+          "Для побудови шрифтів"
+        ],
+        correct: 2,
+        explanation: "Растрова графіка ідеальна для фотографій із плавними переходами мільйонів кольорів.",
+        hint: "Де потрібна передача реальних півтонів та кольорів природи?"
+      },
+      {
+        id: 7,
+        level: 1,
+        levelTitle: "Рівень 1: Базовий",
+        type: "choice",
+        category: "Fractal",
+        question: "Яка галузь найчастіше застосовує фрактальну графіку?",
+        hintSub: "Згадайте природні візерунки та спецефекти.",
+        options: [
+          "Генерування природних ландшафтів, хмар, гір у кіно та іграх",
+          "Редагування паспортних фотографій",
+          "Верстка текстових документів у Word",
+          "Створення бухгалтерських таблиць"
+        ],
+        correct: 0,
+        explanation: "Фрактальні алгоритми ідеально моделюють природні об'єкти: гори, узбережжя, хмари, рослини.",
+        hint: "Природа часто має самоподібну структуру (гори, дерева)."
+      },
+      {
+        id: 8,
+        level: 1,
+        levelTitle: "Рівень 1: Базовий",
+        type: "choice",
+        category: "3D",
+        question: "З чого складається полігональна сітка в 3D-моделюванні?",
+        hintSub: "Геометричні елементи у просторі.",
+        options: [
+          "З пікселів та растрових шарів",
+          "З вершин, ребер та граней (полігонів)",
+          "З математичних формул фракталів",
+          "Виключно з кольорових векторних точок"
+        ],
+        correct: 1,
+        explanation: "3D-модель (сітка) будується з вершин (Vertices), ребер (Edges) та плоских граней (Polygons).",
+        hint: "Полігон — це багатокутник (найчастіше трикутник або чотирикутник)."
+      },
+
+      // ----------------- LEVEL 2: MEDIUM (DRAG AND DROP MATCHING) -----------------
+      {
+        id: 9,
+        level: 2,
+        levelTitle: "Рівень 2: Практичний",
+        type: "drag_bucket",
+        category: "Vector",
+        question: "Розподіліть формати файлів між Растровою та Векторною графікою:",
+        hintSub: "Перетягніть кожен формат у відповідний кошик.",
+        items: [
+          { id: "f1", text: ".PNG", type: "raster" },
+          { id: "f2", text: ".SVG", type: "vector" },
+          { id: "f3", text: ".JPEG", type: "raster" },
+          { id: "f4", text: ".AI (Adobe Illustrator)", type: "vector" }
+        ],
+        buckets: [
+          { id: "raster", title: "Растрова графіка", color: "cyan" },
+          { id: "vector", title: "Векторна графіка", color: "purple" }
+        ],
+        explanation: "PNG та JPEG — растрові формати. SVG та AI — векторні формати.",
+        hint: "Пам'ятайте: фотографії — це PNG/JPEG, а масштабована веб-ілюстрація — SVG/AI."
+      },
+      {
+        id: 10,
+        level: 2,
+        levelTitle: "Рівень 2: Практичний",
+        type: "drag_bucket",
+        category: "3D",
+        question: "Розподіліть етапи розробки: що належить до 3D-графіки, а що до Растрової?",
+        hintSub: "Розподіліть поняття по галузях.",
+        items: [
+          { id: "p1", text: "Ретуш фотографій", type: "raster" },
+          { id: "p2", text: "Створення 3D-каркаса (Sculpting)", type: "3d" },
+          { id: "p3", text: "Налаштування джерел світла у просторі", type: "3d" },
+          { id: "p4", text: "Корекція розмиття пікселів", type: "raster" }
+        ],
+        buckets: [
+          { id: "raster", title: "Растрове редагування", color: "cyan" },
+          { id: "3d", title: "3D-проеціювання", color: "amber" }
+        ],
+        explanation: "Скульптинг та світло належать до 3D, а ретуш та пікселі — до растру.",
+        hint: "Подумайте, де працюють з об'єктами у тривимірному просторі."
+      },
+      {
+        id: 11,
+        level: 2,
+        levelTitle: "Рівень 2: Практичний",
+        type: "drag_bucket",
+        category: "Fractal",
+        question: "Розподіліть властивості між Векторною та Фрактальною графікою:",
+        hintSub: "Класифікуйте особливості побудови.",
+        items: [
+          { id: "i1", text: "Складається з примітивів (лінії, кола)", type: "vector" },
+          { id: "i2", text: "Будується за рекурсивними формулами", type: "fractal" },
+          { id: "i3", text: "Утворює самоподібні структури", type: "fractal" },
+          { id: "i4", text: "Використовує контрольні точки Безьє", type: "vector" }
+        ],
+        buckets: [
+          { id: "vector", title: "Векторна", color: "purple" },
+          { id: "fractal", title: "Фрактальна", color: "emerald" }
+        ],
+        explanation: "Фрактали базуються на рекурсивних формулах самоподібності, вектор — на геометричних примітивах та кривих Безьє.",
+        hint: "Рекурсія та самоподібність — головні ключі фракталів."
+      },
+      {
+        id: 12,
+        level: 2,
+        levelTitle: "Рівень 2: Практичний",
+        type: "drag_bucket",
+        category: "Raster",
+        question: "Розподіліть ПЕРЕВАГИ між Растровою та Векторною графікою:",
+        hintSub: "Перетягніть сильні сторони в належні категорії.",
+        items: [
+          { id: "adv1", text: "Реалістичність фотографій та м'які тіні", type: "raster" },
+          { id: "adv2", text: "Малий розмір файлу для простих малюнків", type: "vector" },
+          { id: "adv3", text: "Безмежне масштабування без втрати якості", type: "vector" },
+          { id: "adv4", text: "Точна передача мільйонів колірних відтінків", type: "raster" }
+        ],
+        buckets: [
+          { id: "raster", title: "Переваги Растру", color: "cyan" },
+          { id: "vector", title: "Переваги Вектора", color: "purple" }
+        ],
+        explanation: "Растр забезпечує фотореалістичність, а вектор — ідеальне масштабування та невеликий розмір файлів схематичних малюнків.",
+        hint: "Чому фото роблять у растрі, а логотипи у векторі?"
+      },
+      {
+        id: 13,
+        level: 2,
+        levelTitle: "Рівень 2: Практичний",
+        type: "drag_bucket",
+        category: "Raster",
+        question: "Розподіліть НЕДОЛІКИ графіки:",
+        hintSub: "Визначте мінуси кожного типу.",
+        items: [
+          { id: "dis1", text: "Великий розмір файлів при високій роздільності", type: "raster" },
+          { id: "dis2", text: "Втрата якості (пікселізація) при збільшенні", type: "raster" },
+          { id: "dis3", text: "Складність створення реалістичних фотографій", type: "vector" },
+          { id: "dis4", text: "Високе навантаження на ПК при складній геометрії", type: "vector" }
+        ],
+        buckets: [
+          { id: "raster", title: "Недоліки Растру", color: "cyan" },
+          { id: "vector", title: "Недоліки Вектора", color: "purple" }
+        ],
+        explanation: "Растр розмивається при збільшенні та важить багато. Вектором важко передати реальне фото.",
+        hint: "Згадайте, що відбувається з фото при великому наближенні."
+      },
+      {
+        id: 14,
+        level: 2,
+        levelTitle: "Рівень 2: Практичний",
+        type: "drag_bucket",
+        category: "3D",
+        question: "Розподіліть розширення файлів до відповідних типів (3D або Фрактальна):",
+        hintSub: "Розподіліть специфічні формати.",
+        items: [
+          { id: "ex1", text: ".OBJ / .FBX", type: "3d" },
+          { id: "ex2", text: ".BLEND", type: "3d" },
+          { id: "ex3", text: ".FLAME", type: "fractal" },
+          { id: "ex4", text: ".FRAC", type: "fractal" }
+        ],
+        buckets: [
+          { id: "3d", title: "3D-графіка", color: "amber" },
+          { id: "fractal", title: "Фрактальна", color: "emerald" }
+        ],
+        explanation: ".OBJ, .FBX та .BLEND належать 3D-моделюванню, а .FLAME та .FRAC — фрактальним генераторам.",
+        hint: "Blender використовує розширення .BLEND."
+      },
+      {
+        id: 15,
+        level: 2,
+        levelTitle: "Рівень 2: Практичний",
+        type: "drag_bucket",
+        category: "Vector",
+        question: "Розподіліть популярні програмні засоби за типом графіки:",
+        hintSub: "Перетягніть редактори у правильні кошики.",
+        items: [
+          { id: "s1", text: "Adobe Photoshop / GIMP", type: "raster" },
+          { id: "s2", text: "CorelDRAW / Inkscape", type: "vector" },
+          { id: "s3", text: "Blender / 3ds Max", type: "3d" },
+          { id: "s4", text: "UltraFractal / Apophysis", type: "fractal" }
+        ],
+        buckets: [
+          { id: "raster", title: "Растрові", color: "cyan" },
+          { id: "vector", title: "Векторні", color: "purple" },
+          { id: "3d", title: "3D-редактори", color: "amber" },
+          { id: "fractal", title: "Фрактальні", color: "emerald" }
+        ],
+        explanation: "Photoshop — растровий, CorelDRAW/Inkscape — векторний, Blender — 3D, UltraFractal — фрактальний.",
+        hint: "GIMP і Photoshop працюють з пікселями, Inkscape — з векторами."
+      },
+      {
+        id: 16,
+        level: 2,
+        levelTitle: "Рівень 2: Практичний",
+        type: "drag_bucket",
+        category: "3D",
+        question: "Класифікуйте сфери застосування (3D чи Вектор):",
+        hintSub: "Визначте прикладне призначення.",
+        items: [
+          { id: "u1", text: "Розробка персонажів для комп'ютерних ігор 3D", type: "3d" },
+          { id: "u2", text: "Створення шрифтів та іконок додатків", type: "vector" },
+          { id: "u3", text: "Візуалізація інтер'єрів та архітектури", type: "3d" },
+          { id: "u4", text: "Дизайн фірмового логотипа та візитки", type: "vector" }
+        ],
+        buckets: [
+          { id: "vector", title: "Векторна графіка", color: "purple" },
+          { id: "3d", title: "3D-графіка", color: "amber" }
+        ],
+        explanation: "Ігри та архітектура вимагають 3D, а логотипи та шрифти створюються у векторі.",
+        hint: "Об'ємний простір кімнати — це 3D, а плоский знак фірми — вектор."
+      },
+
+      // ----------------- LEVEL 3: HARD (ASSEMBLING PUZZLE CHAINS) -----------------
+      {
+        id: 17,
+        level: 3,
+        levelTitle: "Рівень 3: Експерт",
+        type: "puzzle_chain",
+        category: "Raster",
+        question: "Складіть послідовний ланцюжок характеристики РАСТРОВОЇ графіки:",
+        hintSub: "Розставте блоки у правильно визначеному порядку: [Базовий елемент] ➔ [Властивість] ➔ [Основний недолік].",
+        tokens: [
+          { id: "t1", text: "Сітка пікселів", step: 1 },
+          { id: "t2", text: "Плавна передача півтонів", step: 2 },
+          { id: "t3", text: "Втрата якості при масштабуванні", step: 3 }
+        ],
+        explanation: "Характеристика Растру: Базовий елемент (Сітка пікселів) ➔ Головна перевага (Плавні півтони) ➔ Недолік (Втрата якості).",
+        hint: "Почніть з елемента, потім перевага і наприкінці мінус."
+      },
+      {
+        id: 18,
+        level: 3,
+        levelTitle: "Рівень 3: Експерт",
+        type: "puzzle_chain",
+        category: "Vector",
+        question: "Складіть послідовний ланцюжок характеристики ВЕКТОРНОЇ графіки:",
+        hintSub: "Порядок: [Основа побудови] ➔ [Ключова перевага] ➔ [Типовий формат].",
+        tokens: [
+          { id: "v1", text: "Математичні формули й лінії", step: 1 },
+          { id: "v2", text: "Ідеальна чіткість при зміні розміру", step: 2 },
+          { id: "v3", text: "Формат .SVG", step: 3 }
+        ],
+        explanation: "Математичні формули визначають вектор ➔ забезпечують чіткість ➔ зберігаються у форматі SVG.",
+        hint: "Почніть із математичної основи."
+      },
+      {
+        id: 19,
+        level: 3,
+        levelTitle: "Рівень 3: Експерт",
+        type: "puzzle_chain",
+        category: "Fractal",
+        question: "Складіть ланцюжок створення ФРАКТАЛЬНОГО зображення:",
+        hintSub: "Порядок: [Математична основа] ➔ [Властивість форми] ➔ [Галузь застосування].",
+        tokens: [
+          { id: "f1", text: "Рекурсивне рівняння", step: 1 },
+          { id: "f2", text: "Самоподібність точок", step: 2 },
+          { id: "f3", text: "Генерація гір та хмар", step: 3 }
+        ],
+        explanation: "Рекурсивні рівняння будують самоподібні форми для моделювання природних об'єктів.",
+        hint: "Формула (рекурсія) породжує самоподібність."
+      },
+      {
+        id: 20,
+        level: 3,
+        levelTitle: "Рівень 3: Експерт",
+        type: "puzzle_chain",
+        category: "3D",
+        question: "Складіть ланцюжок етапів створення 3D-сцени:",
+        hintSub: "Вкажіть хронологічний порядок розробки: [Крок 1] ➔ [Крок 2] ➔ [Фінал].",
+        tokens: [
+          { id: "d1", text: "3D-моделювання (полігони)", step: 1 },
+          { id: "d2", text: "Текстурування та світло", step: 2 },
+          { id: "d3", text: "Фінальний Рендеринг", step: 3 }
+        ],
+        explanation: "Спочатку будується геометричний каркас, потім накладаються текстури/світло, а в кінці виконується рендеринг.",
+        hint: "Рендеринг — це завжди завершальний етап!"
+      },
+      {
+        id: 21,
+        level: 3,
+        levelTitle: "Рівень 3: Експерт",
+        type: "puzzle_chain",
+        category: "Raster",
+        question: "Складіть ланцюжок аналізу кольору в растрі:",
+        hintSub: "Порядок: [Колірна модель] ➔ [Складові канали] ➔ [Призначення].",
+        tokens: [
+          { id: "c1", text: "Модель RGB", step: 1 },
+          { id: "c2", text: "Червоний, Зелений, Синій", step: 2 },
+          { id: "c3", text: "Відображення на екранах", step: 3 }
+        ],
+        explanation: "Колірна модель RGB складається з 3 основних кольорів і використовується для випромінюючих екранів.",
+        hint: "RGB розшифровується через назви 3 кольорів англійською."
+      },
+      {
+        id: 22,
+        level: 3,
+        levelTitle: "Рівень 3: Експерт",
+        type: "puzzle_chain",
+        category: "Vector",
+        question: "Складіть ланцюжок роботи з геометричним примітивом у векторі:",
+        hintSub: "Порядок: [Елемент] ➔ [Інструмент регулювання] ➔ [Властивість заповнення].",
+        tokens: [
+          { id: "vp1", text: "Крива лінія", step: 1 },
+          { id: "vp2", text: "Вузли та маркери Безьє", step: 2 },
+          { id: "vp3", text: "Заповнення градієнтом або контуром", step: 3 }
+        ],
+        explanation: "Форма кривої коригується вузлами Безьє, після чого задається заповнення.",
+        hint: "Вузли Безьє керують вигином кривої."
+      },
+      {
+        id: 23,
+        level: 3,
+        levelTitle: "Рівень 3: Експерт",
+        type: "puzzle_chain",
+        category: "3D",
+        question: "Складіть ланцюжок підготовки 3D-моделі для 3D-друку:",
+        hintSub: "Порядок: [3D-модель] ➔ [Програма-слайсер] ➔ [Фізичний об'єкт].",
+        tokens: [
+          { id: "dp1", text: "Замкнена сітка (.STL / .OBJ)", step: 1 },
+          { id: "dp2", text: "Нарізка на шари у слайсері", step: 2 },
+          { id: "dp3", text: "Пошаровий 3D-друк пластиком", step: 3 }
+        ],
+        explanation: "Файл 3D-моделі завантажується у слайсер, розбивається на шари та відправляється на 3D-принтер.",
+        hint: "Нарізка на шари передує безпосередньому друку."
+      },
+      {
+        id: 24,
+        level: 3,
+        levelTitle: "Рівень 3: Експерт",
+        type: "puzzle_chain",
+        category: "Fractal",
+        question: "Складіть комплексне порівняння: чому фрактал не є растром?",
+        hintSub: "Порядок: [Спосіб збереження] ➔ [Відсутність піксельної сітки] ➔ [Результат обчислень].",
+        tokens: [
+          { id: "fc1", text: "Зберігається як формула, а не масив точок", step: 1 },
+          { id: "fc2", text: "Не розмивається при нескінченному наближенні", step: 2 },
+          { id: "fc3", text: "Будується графічним процесором на льоту", step: 3 }
+        ],
+        explanation: "Фрактал зберігається формулою, тому при наближенні деталі обчислюються наново без втрати чіткості.",
+        hint: "Формула дозволяє нескінченно наближати візерунок."
+      }
+    ];
+
+    /* ==========================================================================
+       GAME STATE MANAGEMENT
+       ========================================================================== */
+    let currentIndex = 0;
+    let score = 0;
+    let mistakesCount = 0;
+    let attemptsOnCurrentTask = 0;
+    let selectedChoiceIndex = null;
+    let userDragState = {}; // For matching/buckets
+    let userPuzzleState = []; // For puzzle order
+
+    // Stats by category
+    const statsByCategory = {
+      Raster: { correct: 0, total: 0 },
+      Vector: { correct: 0, total: 0 },
+      Fractal: { correct: 0, total: 0 },
+      "3D": { correct: 0, total: 0 }
+    };
+
+    /* ==========================================================================
+       INITIALIZATION & FLOW CONTROLS
+       ========================================================================== */
+    function startTrainer() {
+      document.getElementById("start-screen").classList.add("hidden");
+      document.getElementById("game-screen").classList.remove("hidden");
+      document.getElementById("game-screen").classList.add("flex");
+      
+      // Reset State
+      currentIndex = 0;
+      score = 0;
+      mistakesCount = 0;
+      
+      // Initialize category counters
+      TASKS.forEach(t => {
+        if (statsByCategory[t.category]) {
+          statsByCategory[t.category].total++;
+          statsByCategory[t.category].correct = 0;
+        }
+      });
+
+      updateHeaderStats();
+      loadTask(currentIndex);
+    }
+
+    function updateHeaderStats() {
+      document.getElementById("score-display").textContent = score;
+      document.getElementById("progress-text").textContent = `${currentIndex + 1}/24`;
+      
+      const pct = (currentIndex / TASKS.length) * 100;
+      document.getElementById("progress-bar").style.width = `${pct}%`;
+    }
+
+    /* ==========================================================================
+       TASK RENDERER
+       ========================================================================== */
+    function loadTask(index) {
+      if (index >= TASKS.length) {
+        showSummaryScreen();
+        return;
+      }
+
+      const task = TASKS[index];
+      attemptsOnCurrentTask = 0;
+      selectedChoiceIndex = null;
+      userDragState = {};
+      userPuzzleState = [];
+
+      // Update Header Badges
+      const lvlBadge = document.getElementById("level-badge");
+      lvlBadge.textContent = task.levelTitle;
+      if (task.level === 1) {
+        lvlBadge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30";
+      } else if (task.level === 2) {
+        lvlBadge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30";
+      } else {
+        lvlBadge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30";
+      }
+
+      document.getElementById("task-number").textContent = `Завдання ${index + 1} з ${TASKS.length}`;
+      document.getElementById("topic-tag").textContent = `Тема: ${getCategoryUaName(task.category)}`;
+      
+      // Question Texts
+      document.getElementById("question-text").textContent = task.question;
+      document.getElementById("question-hint-subtitle").textContent = task.hintSub;
+
+      // Hide Feedback Box
+      const fbBox = document.getElementById("feedback-box");
+      fbBox.className = "hidden mt-4 p-4 rounded-2xl border transition-all duration-300";
+
+      // Render Interactive Area depending on Level & Type
+      const area = document.getElementById("interactive-area");
+      area.innerHTML = "";
+
+      if (task.type === "choice") {
+        renderChoiceArea(area, task);
+      } else if (task.type === "drag_bucket") {
+        renderDragBucketArea(area, task);
+      } else if (task.type === "puzzle_chain") {
+        renderPuzzleChainArea(area, task);
+      }
+
+      // Reset Action Button
+      const actBtn = document.getElementById("action-btn");
+      actBtn.onclick = checkCurrentAnswer;
+      actBtn.innerHTML = `<span>Перевірити</span> <i class="fa-solid fa-arrow-right text-xs"></i>`;
+      actBtn.disabled = false;
+      actBtn.className = "px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer";
+
+      updateHeaderStats();
+    }
+
+    function getCategoryUaName(cat) {
+      switch (cat) {
+        case "Raster": return "Растрова графіка";
+        case "Vector": return "Векторна графіка";
+        case "Fractal": return "Фрактальна графіка";
+        case "3D": return "3D-графіка";
+        default: return cat;
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       RENDERER 1: MULTIPLE CHOICE (LEVEL 1)
+       -------------------------------------------------------------------------- */
+    function renderChoiceArea(container, task) {
+      const grid = document.createElement("div");
+      grid.className = "grid grid-cols-1 sm:grid-cols-2 gap-3 w-full";
+
+      task.options.forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "choice-option-btn p-4 rounded-2xl text-left text-sm border border-slate-700 bg-slate-800/60 hover:bg-slate-700/80 transition flex items-start gap-3 text-slate-200";
+        btn.onclick = () => selectChoiceOption(idx);
+        btn.setAttribute("data-index", idx);
+
+        btn.innerHTML = `
+          <div class="opt-bullet w-6 h-6 rounded-full border border-slate-500 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+            ${String.fromCharCode(65 + idx)}
+          </div>
+          <span class="leading-snug">${opt}</span>
+        `;
+        grid.appendChild(btn);
+      });
+
+      container.appendChild(grid);
+    }
+
+    function selectChoiceOption(idx) {
+      selectedChoiceIndex = idx;
+      const btns = document.querySelectorAll(".choice-option-btn");
+      btns.forEach((b, i) => {
+        const bullet = b.querySelector(".opt-bullet");
+        if (i === idx) {
+          b.className = "choice-option-btn p-4 rounded-2xl text-left text-sm border-2 border-indigo-500 bg-indigo-950/40 transition flex items-start gap-3 text-white shadow-md shadow-indigo-500/10";
+          bullet.className = "opt-bullet w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5";
+        } else {
+          b.className = "choice-option-btn p-4 rounded-2xl text-left text-sm border border-slate-700 bg-slate-800/60 hover:bg-slate-700/80 transition flex items-start gap-3 text-slate-200";
+          bullet.className = "opt-bullet w-6 h-6 rounded-full border border-slate-500 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5";
+        }
+      });
+    }
+
+    /* --------------------------------------------------------------------------
+       RENDERER 2: DRAG & DROP BUCKETS (LEVEL 2)
+       -------------------------------------------------------------------------- */
+    function renderDragBucketArea(container, task) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "flex flex-col gap-6 w-full";
+
+      // Pool of draggable items
+      const poolDiv = document.createElement("div");
+      poolDiv.className = "bg-slate-900/60 p-4 rounded-2xl border border-slate-800 min-h-[70px] flex flex-wrap gap-2.5 items-center justify-center";
+      poolDiv.id = "items-pool";
+      poolDiv.ondragover = (e) => e.preventDefault();
+      poolDiv.ondrop = (e) => handleDropToPool(e);
+
+      task.items.forEach(item => {
+        const itemEl = createDraggableElement(item);
+        poolDiv.appendChild(itemEl);
+      });
+
+      // Buckets Grid
+      const bucketsGrid = document.createElement("div");
+      const colClass = task.buckets.length > 2 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2";
+      bucketsGrid.className = `grid ${colClass} gap-4 w-full`;
+
+      task.buckets.forEach(b => {
+        const bEl = document.createElement("div");
+        bEl.className = "drop-zone glass-panel p-4 rounded-2xl border border-slate-700 flex flex-col min-h-[140px]";
+        bEl.setAttribute("data-bucket-id", b.id);
+
+        bEl.ondragover = (e) => {
+          e.preventDefault();
+          bEl.classList.add("drag-over");
+        };
+        bEl.ondragleave = () => bEl.classList.remove("drag-over");
+        bEl.ondrop = (e) => handleDropToBucket(e, b.id, bEl);
+
+        bEl.innerHTML = `
+          <div class="font-bold text-xs sm:text-sm text-center pb-2 mb-2 border-b border-slate-700 text-slate-300 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-box-archive text-indigo-400"></i> ${b.title}
+          </div>
+          <div class="bucket-content flex-grow flex flex-col gap-2 p-1"></div>
+        `;
+        bucketsGrid.appendChild(bEl);
+      });
+
+      wrapper.appendChild(poolDiv);
+      wrapper.appendChild(bucketsGrid);
+      container.appendChild(wrapper);
+    }
+
+    function createDraggableElement(item) {
+      const el = document.createElement("div");
+      el.className = "draggable-item px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs sm:text-sm rounded-xl border border-slate-600 shadow-sm flex items-center gap-2 cursor-grab active:cursor-grabbing";
+      el.draggable = true;
+      el.id = `drag-${item.id}`;
+      el.setAttribute("data-item-id", item.id);
+      el.setAttribute("data-correct-type", item.type);
+
+      el.innerHTML = `<i class="fa-solid fa-grip-vertical text-slate-500 text-xs"></i> <span>${item.text}</span>`;
+
+      el.ondragstart = (e) => {
+        e.dataTransfer.setData("text/plain", item.id);
+        el.classList.add("opacity-50");
+      };
+      el.ondragend = () => el.classList.remove("opacity-50");
+
+      return el;
+    }
+
+    function handleDropToBucket(e, bucketId, bucketElement) {
+      e.preventDefault();
+      bucketElement.classList.remove("drag-over");
+      const itemId = e.dataTransfer.getData("text/plain");
+      const itemEl = document.getElementById(`drag-${itemId}`);
+      if (itemEl) {
+        const contentArea = bucketElement.querySelector(".bucket-content");
+        contentArea.appendChild(itemEl);
+        userDragState[itemId] = bucketId;
+      }
+    }
+
+    function handleDropToPool(e) {
+      e.preventDefault();
+      const itemId = e.dataTransfer.getData("text/plain");
+      const itemEl = document.getElementById(`drag-${itemId}`);
+      if (itemEl) {
+        document.getElementById("items-pool").appendChild(itemEl);
+        delete userDragState[itemId];
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       RENDERER 3: PUZZLE CHAINS / CONSTRUCTING (LEVEL 3)
+       -------------------------------------------------------------------------- */
+    function renderPuzzleChainArea(container, task) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "flex flex-col gap-5 w-full";
+
+      // Target Drop Slots (Ordered 1 to N)
+      const slotsDiv = document.createElement("div");
+      slotsDiv.className = "grid grid-cols-1 sm:grid-cols-3 gap-3 w-full";
+
+      // Shuffle tokens for initial presentation
+      const shuffledTokens = [...task.tokens].sort(() => Math.random() - 0.5);
+
+      for (let i = 0; i < task.tokens.length; i++) {
+        const slot = document.createElement("div");
+        slot.className = "drop-zone glass-panel p-3 rounded-2xl border border-dashed border-slate-600 flex flex-col items-center justify-center min-h-[90px] relative";
+        slot.setAttribute("data-slot-index", i);
+
+        slot.ondragover = (e) => {
+          e.preventDefault();
+          slot.classList.add("drag-over");
+        };
+        slot.ondragleave = () => slot.classList.remove("drag-over");
+        slot.ondrop = (e) => handleDropToPuzzleSlot(e, i, slot);
+
+        slot.innerHTML = `
+          <span class="absolute top-2 left-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider">Крок ${i + 1}</span>
+          <div class="slot-content w-full flex items-center justify-center mt-3"></div>
+        `;
+        slotsDiv.appendChild(slot);
+      }
+
+      // Source Pool
+      const poolDiv = document.createElement("div");
+      poolDiv.className = "bg-slate-900/60 p-4 rounded-2xl border border-slate-800 min-h-[80px] flex flex-wrap gap-3 items-center justify-center";
+      poolDiv.id = "puzzle-pool";
+      poolDiv.ondragover = (e) => e.preventDefault();
+      poolDiv.ondrop = (e) => handleDropToPuzzlePool(e);
+
+      shuffledTokens.forEach(token => {
+        const tokenEl = createPuzzleTokenElement(token);
+        poolDiv.appendChild(tokenEl);
+      });
+
+      wrapper.appendChild(slotsDiv);
+      wrapper.appendChild(poolDiv);
+      container.appendChild(wrapper);
+    }
+
+    function createPuzzleTokenElement(token) {
+      const el = document.createElement("div");
+      el.className = "draggable-item p-3 bg-gradient-to-r from-slate-800 to-indigo-950 hover:from-slate-700 hover:to-indigo-900 text-white text-xs sm:text-sm font-medium rounded-xl border border-indigo-500/40 shadow-md flex items-center gap-2 cursor-grab active:cursor-grabbing w-full sm:w-auto text-center justify-center";
+      el.draggable = true;
+      el.id = `puzzle-${token.id}`;
+      el.setAttribute("data-token-id", token.id);
+      el.setAttribute("data-step", token.step);
+
+      el.innerHTML = `<i class="fa-solid fa-puzzle-piece text-indigo-400 text-xs"></i> <span>${token.text}</span>`;
+
+      el.ondragstart = (e) => {
+        e.dataTransfer.setData("text/plain", token.id);
+        el.classList.add("opacity-40");
+      };
+      el.ondragend = () => el.classList.remove("opacity-40");
+
+      return el;
+    }
+
+    function handleDropToPuzzleSlot(e, slotIndex, slotEl) {
+      e.preventDefault();
+      slotEl.classList.remove("drag-over");
+      const tokenId = e.dataTransfer.getData("text/plain");
+      const tokenEl = document.getElementById(`puzzle-${tokenId}`);
+      
+      if (tokenEl) {
+        const slotContent = slotEl.querySelector(".slot-content");
+        // If slot already has an item, return it to pool
+        if (slotContent.children.length > 0) {
+          const oldChild = slotContent.children[0];
+          document.getElementById("puzzle-pool").appendChild(oldChild);
+        }
+        slotContent.appendChild(tokenEl);
+        userPuzzleState[slotIndex] = tokenId;
+      }
+    }
+
+    function handleDropToPuzzlePool(e) {
+      e.preventDefault();
+      const tokenId = e.dataTransfer.getData("text/plain");
+      const tokenEl = document.getElementById(`puzzle-${tokenId}`);
+      if (tokenEl) {
+        document.getElementById("puzzle-pool").appendChild(tokenEl);
+        // Remove from state array if present
+        const idx = userPuzzleState.indexOf(tokenId);
+        if (idx !== -1) userPuzzleState[idx] = null;
+      }
+    }
+
+    /* ==========================================================================
+       ANSWER VERIFICATION & FEEDBACK LOGIC
+       ========================================================================== */
+    function checkCurrentAnswer() {
+      const task = TASKS[currentIndex];
+      let isCorrect = false;
+      let notCompleted = false;
+
+      // Check depending on task type
+      if (task.type === "choice") {
+        if (selectedChoiceIndex === null) {
+          showFeedback("warning", "Не обрано відповідь", "Будь ласка, натисніть на один із варіантів для перевірки.");
+          return;
+        }
+        isCorrect = (selectedChoiceIndex === task.correct);
+
+      } else if (task.type === "drag_bucket") {
+        const totalItems = task.items.length;
+        const placedCount = Object.keys(userDragState).length;
+
+        if (placedCount < totalItems) {
+          showFeedback("warning", "Розподіліть усі елементи", "Будь ласка, розкладіть усі формати чи властивості у відповідні кошики!");
+          return;
+        }
+
+        // Check if all placed elements match their correct type
+        isCorrect = task.items.every(item => userDragState[item.id] === item.type);
+
+      } else if (task.type === "puzzle_chain") {
+        const filledSlots = userPuzzleState.filter(x => x !== null && x !== undefined).length;
+        if (filledSlots < task.tokens.length) {
+          showFeedback("warning", "Заповніть усі кроки", "Будь ласка, перетягніть блоки у всі 3 позиції ланцюжка!");
+          return;
+        }
+
+        // Check correct step order
+        isCorrect = task.tokens.every(token => {
+          const slotIdx = token.step - 1;
+          return userPuzzleState[slotIdx] === token.id;
+        });
+      }
+
+      // Handle Outcome
+      if (isCorrect) {
+        handleSuccess(task);
+      } else {
+        handleFailure(task);
+      }
+    }
+
+    function handleSuccess(task) {
+      // Score calculation: First attempt = 10 pts, retry = 5 pts
+      const points = (attemptsOnCurrentTask === 0) ? 10 : 5;
+      score += points;
+      statsByCategory[task.category].correct++;
+
+      showFeedback("success", `Чудово! (+${points} балів)`, task.explanation);
+
+      const actBtn = document.getElementById("action-btn");
+      actBtn.innerHTML = `<span>Наступне</span> <i class="fa-solid fa-arrow-right text-xs"></i>`;
+      actBtn.className = "px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer";
+      actBtn.onclick = () => {
+        currentIndex++;
+        loadTask(currentIndex);
+      };
+      
+      updateHeaderStats();
+    }
+
+    function handleFailure(task) {
+      attemptsOnCurrentTask++;
+      mistakesCount++;
+
+      showFeedback("error", "Спробуйте ще раз!", task.hint);
+    }
+
+    function showFeedback(type, title, message) {
+      const fbBox = document.getElementById("feedback-box");
+      const fbIcon = document.getElementById("feedback-icon");
+      const fbTitle = document.getElementById("feedback-title");
+      const fbMsg = document.getElementById("feedback-message");
+
+      fbBox.classList.remove("hidden");
+
+      if (type === "success") {
+        fbBox.className = "mt-4 p-4 rounded-2xl border transition-all duration-300 bg-emerald-950/60 border-emerald-500/40 text-emerald-200";
+        fbIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i>`;
+        fbTitle.className = "font-bold text-sm mb-1 text-emerald-300";
+      } else if (type === "error") {
+        fbBox.className = "mt-4 p-4 rounded-2xl border transition-all duration-300 bg-rose-950/60 border-rose-500/40 text-rose-200";
+        fbIcon.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-400"></i>`;
+        fbTitle.className = "font-bold text-sm mb-1 text-rose-300";
+      } else {
+        // Warning
+        fbBox.className = "mt-4 p-4 rounded-2xl border transition-all duration-300 bg-amber-950/60 border-amber-500/40 text-amber-200";
+        fbIcon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>`;
+        fbTitle.className = "font-bold text-sm mb-1 text-amber-300";
+      }
+
+      fbTitle.textContent = title;
+      fbMsg.textContent = message;
+    }
+
+    function showHintManual() {
+      const task = TASKS[currentIndex];
+      showFeedback("warning", "Підказка методиста", task.hint);
+    }
+
+    /* ==========================================================================
+       SUMMARY & RECOMMENDATIONS SCREEN
+       ========================================================================== */
+    function showSummaryScreen() {
+      document.getElementById("game-screen").classList.add("hidden");
+      document.getElementById("summary-screen").classList.remove("hidden");
+
+      const maxPossibleScore = TASKS.length * 10;
+      const accuracyPct = Math.round((score / maxPossibleScore) * 100);
+
+      document.getElementById("final-score").textContent = `${score} б.`;
+      document.getElementById("final-max-score").textContent = `з ${maxPossibleScore} можливих`;
+      document.getElementById("final-accuracy").textContent = `${accuracyPct}%`;
+      document.getElementById("final-stats-text").textContent = `Помилок/повторів: ${mistakesCount}`;
+
+      // Set Title / Rank based on score
+      const rankEl = document.getElementById("final-rank");
+      if (accuracyPct >= 90) {
+        rankEl.textContent = "🏆 Експерт Комп'ютерної Графіки";
+        rankEl.className = "text-lg sm:text-xl font-bold text-amber-300 mt-1";
+      } else if (accuracyPct >= 70) {
+        rankEl.textContent = "⭐ Досвідчений Графік";
+        rankEl.className = "text-lg sm:text-xl font-bold text-purple-300 mt-1";
+      } else if (accuracyPct >= 50) {
+        rankEl.textContent = "🎨 Графічний Учень";
+        rankEl.className = "text-lg sm:text-xl font-bold text-cyan-300 mt-1";
+      } else {
+        rankEl.textContent = "🌱 Початківець";
+        rankEl.className = "text-lg sm:text-xl font-bold text-slate-300 mt-1";
+      }
+
+      // Render Category Breakdown
+      const catContainer = document.getElementById("category-stats");
+      catContainer.innerHTML = "";
+
+      const recommendations = [];
+
+      Object.keys(statsByCategory).forEach(cat => {
+        const item = statsByCategory[cat];
+        const catPct = Math.round((item.correct / item.total) * 100);
+
+        const card = document.createElement("div");
+        card.className = "bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between";
+        
+        let colorClass = "text-emerald-400";
+        if (catPct < 60) colorClass = "text-rose-400";
+        else if (catPct < 85) colorClass = "text-amber-400";
+
+        card.innerHTML = `
+          <div class="text-xs font-semibold text-slate-400 mb-1">${getCategoryUaName(cat)}</div>
+          <div class="text-2xl font-bold ${colorClass}">${catPct}%</div>
+          <div class="text-[11px] text-slate-500 mt-1">${item.correct} з ${item.total} правильних</div>
+        `;
+        catContainer.appendChild(card);
+
+        // Build personalized recommendations
+        if (catPct < 75) {
+          if (cat === "Raster") {
+            recommendations.push("Повторіть тему **Растрова графіка**: згадайте роздільну здатність, піксельну сітку та формати .PNG / .JPEG.");
+          } else if (cat === "Vector") {
+            recommendations.push("Повторіть тему **Векторна графіка**: згадайте криві Безьє, масштабування без втрат та формат .SVG.");
+          } else if (cat === "Fractal") {
+            recommendations.push("Повторіть тему **Фрактальна графіка**: вивчіть поняття рекурсії, формул та самоподібності структур у природі.");
+          } else if (cat === "3D") {
+            recommendations.push("Повторіть тему **3D-графіка**: зверніть увагу на етапи 3D-моделювання, скульптинг, сітку полігонів та Рендеринг.");
+          }
+        }
+      });
+
+      // Default recommendation if all high
+      if (recommendations.length === 0) {
+        recommendations.push("Ви чудово засвоїли всі види комп'ютерної графіки! Готові до контрольної роботи на 12 балів!");
+      }
+
+      const recList = document.getElementById("recommendations-list");
+      recList.innerHTML = "";
+      recommendations.forEach(rec => {
+        const li = document.createElement("li");
+        li.className = "flex items-start gap-2";
+        // Parse simple bold asterisks
+        const parsedRec = rec.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>');
+        li.innerHTML = `<i class="fa-solid fa-check text-indigo-400 mt-1 text-xs"></i> <span>${parsedRec}</span>`;
+        recList.appendChild(li);
+      });
+    }
+
+    function restartTrainer() {
+      document.getElementById("summary-screen").classList.add("hidden");
+      startTrainer();
+    }
+  </script>
+</body>
+</html>
